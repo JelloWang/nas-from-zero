@@ -1,0 +1,45 @@
+# ⚠️ 反面教材：bridge 模式的 Tailscale
+
+> 此配置能跑，但打洞直连永远失败——所有流量被迫绕海外 DERP 中继，延迟 300ms+。
+> 保留此文件作为对比教材，**不要使用**。
+
+```yaml
+services:
+  tailscale:
+    image: "tailscale/tailscale:latest"
+    container_name: "tailscale"
+    hostname: "ugreen-nas"
+    restart: "unless-stopped"
+    network_mode: "bridge"          # ❌ 问题所在
+    ports:
+      - "41641:41641/udp"           # ❌ 端口映射 ≠ 正确转发，NAT 破坏打洞
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - "/volume1/docker/tailscale/state:/var/lib/tailscale"
+    environment:
+      - "TS_STATE_DIR=/var/lib/tailscale"
+      - "TS_ROUTES=192.168.10.0/24"
+      - "TS_USERSPACE=false"
+      - "TZ=Asia/Shanghai"
+```
+
+## 症状与确诊
+
+```
+$ tailscale ping <对端>
+pong via DERP(tok) in 318ms     ← 走东京中继
+direct connection not established  ← 打洞失败
+```
+
+**根因**：bridge 容器的 UDP 流量经 Docker NAT 转换（容器假地址 172.17.x.x → 宿主机真地址），
+端点信息失真，UDP 打洞成功率暴跌。
+
+## 另一个连带损失
+
+bridge 网络是 v4-only：宿主机就算有公网 IPv6，容器也完全看不见——
+v6 直连这条路也被堵死。
+
+## 修复
+
+见 [compose-host.yml](compose-host.yml)。state 目录保留时机器身份不变，无需重新授权。

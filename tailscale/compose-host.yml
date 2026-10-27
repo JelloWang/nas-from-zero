@@ -1,0 +1,18 @@
+services:
+  tailscale:
+    image: "docker.m.daocloud.io/tailscale/tailscale:latest"
+    container_name: "tailscale"
+    hostname: "ugreen-nas"          # 换成你的设备名
+    network_mode: "host"            # 关键：host 模式才能正常打洞直连 + 继承 v6
+    restart: "unless-stopped"
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - "/dev/net/tun:/dev/net/tun"
+    volumes:
+      - "/volume1/docker/tailscale/state:/var/lib/tailscale"  # state 保留 = 机器身份保留，重建容器无需重新授权
+    environment:
+      - "TS_STATE_DIR=/var/lib/tailscale"
+      - "TS_ROUTES=192.168.10.0/24"   # 子网路由：广播你家的局域网段（在管理台批准后生效）
+      - "TS_USERSPACE=false"
+      - "TZ=Asia/Shanghai"

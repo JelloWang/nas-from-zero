@@ -1,0 +1,13 @@
+services:
+  jellyfin:
+    image: "docker.m.daocloud.io/jellyfin/jellyfin:10.10.7"  # LTS，向导 API 稳定
+    container_name: "jellyfin"
+    network_mode: "host"          # host 网络：直通端口 + 继承宿主机 v4/v6
+    restart: "unless-stopped"
+    volumes:
+      - "/volume1/Media:/media"                    # 媒体目录
+      - "/volume1/docker/jf10/config:/config"      # 配置（建议独立目录，勿复用旧配置）
+      - "/volume1/docker/jf10/cache:/cache"
+    environment:
+      - "TZ=Asia/Shanghai"
+      - "JELLYFIN_PublishedServerUrl=http://192.168.10.13:8096"  # 换成你的 NAS 内网 IP
